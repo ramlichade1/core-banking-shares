@@ -6,11 +6,14 @@ import {
   Navigate,
   useLocation,
 } from "react-router-dom";
+
 import Header from "./components/header";
 import Home from "./pages/home";
 import LoginPage from "./pages/login";
 import SignupPage from "./pages/SignUp";
 import Profile from "./pages/profile";
+import AdminPannel from "./pages/AdminPannel";
+import BankEmployeeProfile from "./pages/BankEmpProfile";
 
 // Wrapper component to handle conditional header
 const Layout = ({ children }) => {
@@ -31,15 +34,22 @@ const ProtectedRoute = ({ children }) => {
   return token ? children : <Navigate to="/login" replace />;
 };
 
+// ✅ ProtectedAdminRoute: checks bankEmployee in localStorage
+const ProtectedAdminRoute = ({ children }) => {
+  const bankEmployee = localStorage.getItem("employeeId");
+  return bankEmployee ? children : <Navigate to="/login" replace />;
+};
+
 function App() {
   return (
     <Router>
       <Layout>
         <Routes>
+          {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sign-up" element={<SignupPage />} />
 
-          {/* Home protected */}
+          {/* Protected Routes */}
           <Route
             path="/"
             element={
@@ -48,8 +58,6 @@ function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* ✅ Profile protected */}
           <Route
             path="/profile"
             element={
@@ -59,8 +67,26 @@ function App() {
             }
           />
 
-          {/* Redirect everything else */}
-          <Route path="*" element={<Navigate to="/" />} />
+          {/* Admin Protected Routes */}
+          <Route
+            path="/admin-pannel"
+            element={
+              <ProtectedAdminRoute>
+                <AdminPannel />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/bankEmp-profile"
+            element={
+              <ProtectedAdminRoute>
+                <BankEmployeeProfile />
+              </ProtectedAdminRoute>
+            }
+          />
+
+          {/* Redirect all unknown routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>
     </Router>

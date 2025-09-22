@@ -33,6 +33,10 @@ const Header = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("employee");
+    localStorage.removeItem("customerId");
+    localStorage.removeItem("customer");
+    localStorage.removeItem("bankId");
     handleCloseMenu();
     navigate("/login");
   };
@@ -86,7 +90,7 @@ const Header = () => {
         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {/* ✅ Home button only on profile page */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            {location.pathname === "/profile" && (
+            {(location.pathname === "/profile" || location.pathname === "/bankEmp-profile") && (
               <IconButton
                 color="inherit"
                 aria-label="go-back"
@@ -140,11 +144,23 @@ const Header = () => {
               <MenuItem
                 onClick={() => {
                   handleCloseMenu();
-                  navigate("/profile");
+                  // ✅ check localStorage to navigate to correct profile
+                  const customerId = localStorage.getItem("customerId");
+                  const employeeId = localStorage.getItem("employeeId");
+
+                  if (customerId) {
+                    navigate("/profile");
+                  } else if (employeeId) {
+                    navigate("/bankEmp-profile");
+                  } else {
+                    // fallback: go to login if nothing exists
+                    navigate("/login");
+                  }
                 }}
               >
                 <PersonIcon sx={{ mr: 1 }} /> Profile
               </MenuItem>
+
 
               <MenuItem onClick={handleLogout}>
                 <LogoutIcon sx={{ mr: 1 }} /> Logout

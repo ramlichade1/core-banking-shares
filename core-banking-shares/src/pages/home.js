@@ -319,7 +319,7 @@ const Home = () => {
             <Avatar src={DccLogo} alt="DCC Logo" sx={{ width: 40, height: 40 }} />
             <Box>
               <Typography variant="h6" fontWeight="bold">
-                Bhandara District Central Co-Operative Bank Ltd
+                Bhandara District Central Co-Operative Bank Equity Share
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 DCC Bank
@@ -331,26 +331,12 @@ const Home = () => {
               <>
                 <Stack direction="row" alignItems="center" spacing={1}>
                   <Typography variant="h5" fontWeight="bold">₹{shareSummary.price}</Typography>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    sx={{
-                      borderRadius: "15px",
-                      borderColor: "#e0e0e0",
-                      color: "text.secondary",
-                      textTransform: "none",
-                      fontSize: "0.75rem",
-                      padding: "2px 8px"
-                    }}
-                  >
-                    View All
-                  </Button>
                 </Stack>
                 <Typography
                   variant="body2"
-                  sx={{ color: shareSummary.trendPercent >= 0 ? "green" : "red", mt: 0.5 }}
+                  sx={{ color: shareSummary.trend >= 0 ? "green" : "red", mt: 0.5 }}
                 >
-                  {shareSummary.trendTitle} {shareSummary.trendPercent >= 0 ? "▲" : "▼"} {shareSummary.trendPercent}%
+                  {shareSummary.trend >= 0 ? "▲" : "▼"} {shareSummary.trend.toFixed(2)}%
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Last update {shareSummary.lastUpdate}
