@@ -14,6 +14,7 @@ import SignupPage from "./pages/SignUp";
 import Profile from "./pages/profile";
 import AdminPannel from "./pages/AdminPannel";
 import BankEmployeeProfile from "./pages/BankEmpProfile";
+import YourCustomersPage from "./pages/YourCustomers";
 
 // Wrapper component to handle conditional header
 const Layout = ({ children }) => {
@@ -81,6 +82,14 @@ function App() {
             element={
               <ProtectedAdminRoute>
                 <BankEmployeeProfile />
+              </ProtectedAdminRoute>
+            }
+          />
+          <Route
+            path="/your-customers"
+            element={
+              <ProtectedAdminRoute>
+                <YourCustomersPage />
               </ProtectedAdminRoute>
             }
           />

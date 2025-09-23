@@ -237,6 +237,7 @@ const AdminPannel = () => {
                                     <Typography>Total Shares: {share.totalIssued}</Typography>
                                     <Typography>Available Shares: {share.available}</Typography>
                                     <Typography>Market Price: ₹{share.marketPrice}</Typography>
+                                    <Typography>Face Value: ₹{share.faceValue}</Typography>
                                 </Box>
                             ))
                         ) : (
