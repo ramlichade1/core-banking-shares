@@ -8,6 +8,8 @@ import Avatar from "@mui/material/Avatar";
 import Typography from "@mui/material/Typography";
 import DccLogo from "../assets/bhandara-dcc-logo.png";
 import { Modal, TextField, IconButton } from "@mui/material";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Checkbox from "@mui/material/Checkbox";
 
 
 import {
@@ -39,6 +41,11 @@ const Home = () => {
   const [customerShares, setCustomerShares] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [shareSummary, setShareSummary] = useState(null);
+  const [buyQuantity, setBuyQuantity] = useState(1);
+  const [sellQuantity, setSellQuantity] = useState(1);
+  const [useCustomPrice, setUseCustomPrice] = useState(false);
+  const [customPrice, setCustomPrice] = useState(0);
+
 
   // Chart responsive width
   const chartRef = useRef();
@@ -150,22 +157,24 @@ const Home = () => {
 
   // API calls
   const handleOpenBuy = async (shareId) => {
+    const token = localStorage.getItem("token"); // JWT token
     try {
-      const res = await fetch(`http://localhost:5000/api/shares/${shareId}`);
+      const res = await fetch(`http://localhost:5000/api/shares/${shareId}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const data = await res.json();
-      console.log("Fetched share:", data.share);
 
       if (res.ok) {
-        // ✅ Correct mapping
         const mappedShare = {
           id: data.share.id,
           name: data.share.name,
           marketPrice: data.share.marketPrice,
           available: data.share.available,
         };
-        setSelectedShare(mappedShare);  // ab seedha marketPrice milega
-        setQuantity(1);
-        setOpenBuyModal(true);
+
+        setSelectedShare(mappedShare);
+        setBuyQuantity(mappedShare.available > 0 ? 1 : 0); // quantity 0 if unavailable
+        setOpenBuyModal(true); // ✅ modal always opens
       } else {
         alert(data.error);
       }
@@ -176,24 +185,29 @@ const Home = () => {
   };
 
 
-
-  const handleBuy = async (shareId, qty) => {
+  const handleBuy = async (shareId, qty, price) => {
     const customer = JSON.parse(localStorage.getItem("customer"));
     if (!customer) return alert("Customer not found in local storage");
+
+    const token = localStorage.getItem("token"); // JWT from localStorage
+    if (!token) return alert("You are not logged in");
 
     try {
       const res = await fetch("http://localhost:5000/api/shares/buy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId: customer.id, shareId, quantity: qty }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ customerId: customer.id, shareId, quantity: qty, price }) // ✅ pass price
       });
 
       const data = await res.json();
       console.log("Buy response:", data);
 
       if (res.ok) {
-        const price = data.transaction?.price ?? selectedShare?.marketPrice ?? 0; // fallback
-        setBalance(prev => prev - price * qty);
+        const usedPrice = data.transaction?.price ?? price ?? selectedShare?.marketPrice ?? 0;
+        setBalance(prev => prev - usedPrice * qty);
 
         fetchCustomerShares();
         fetchChartData();
@@ -210,13 +224,18 @@ const Home = () => {
   };
 
 
-  const handleSell = async (shareId, qty) => {
+  const handleSell = async (shareId, qty, price) => {
     const customer = JSON.parse(localStorage.getItem("customer"));
     if (!customer) return alert("Customer not found in local storage");
 
+    const token = localStorage.getItem("token"); // JWT from localStorage
+    if (!token) return alert("You are not logged in");
+
     try {
       // Fetch latest customer shares
-      const res = await fetch(`http://localhost:5000/api/shares/customer/${customer.id}`);
+      const res = await fetch(`http://localhost:5000/api/shares/customer/${customer.id}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const latestShares = await res.json();
 
       const shareInfo = latestShares.find(s => Number(s.id) === Number(shareId));
@@ -229,19 +248,20 @@ const Home = () => {
       // Call backend sell API
       const sellRes = await fetch("http://localhost:5000/api/shares/sell", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: Number(customer.id),
-          shareId: Number(shareId),
-          quantity: Number(qty),
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ customerId: customer.id, shareId, quantity: qty, price }) // ✅ pass custom price
       });
 
       const sellData = await sellRes.json();
       if (!sellRes.ok) return alert(sellData.error || "Error selling share");
 
+      const usedPrice = sellData.price ?? price ?? shareInfo.currentPrice ?? 0;
+
       // Update balance and refresh data
-      setBalance(prev => prev + (sellData.price ?? 0) * qty);
+      setBalance(prev => prev + usedPrice * qty);
       fetchCustomerShares();
       fetchChartData();
       fetchShareSummary();
@@ -280,7 +300,7 @@ const Home = () => {
 
       setCustomerShares(mappedShares);
       setSelectedShareForSell(mappedShares[0]); // default first share
-      setQuantity(mappedShares[0].ownedQuantity > 0 ? 1 : 0);
+      setSellQuantity(mappedShares[0].ownedQuantity > 0 ? 1 : 0);
       setOpenSellModal(true);
     } catch (err) {
       console.error(err);
@@ -455,23 +475,26 @@ const Home = () => {
       </Paper>
 
       <Modal open={openSellModal} onClose={() => setOpenSellModal(false)}>
-        <Box sx={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 300,
-          bgcolor: "background.paper",
-          boxShadow: 24,
-          p: 4,
-          borderRadius: 2
-        }}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 320,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2
+          }}
+        >
           <IconButton
             onClick={() => setOpenSellModal(false)}
             sx={{ position: "absolute", top: 8, right: 8, color: "red" }}
           >
             ✖
           </IconButton>
+
           <Typography variant="h6" mb={2}>Sell Shares</Typography>
 
           {customerShares.length === 0 ? (
@@ -484,9 +507,9 @@ const Home = () => {
                 label="Select Share"
                 value={selectedShareForSell?.id || ""}
                 onChange={e => {
-                  const share = customerShares.find(s => Number(s.id) === Number(e.target.value));
+                  const share = customerShares.find(s => s.id === Number(e.target.value));
                   setSelectedShareForSell(share);
-                  setQuantity(share.ownedQuantity > 0 ? 1 : 0);
+                  setSellQuantity(1); // reset to 1
                 }}
                 SelectProps={{ native: true }}
                 fullWidth
@@ -501,27 +524,58 @@ const Home = () => {
 
               {selectedShareForSell && (
                 <>
+                  <Typography mb={1}>
+                    Current Market Price: ₹{selectedShareForSell.currentPrice}
+                  </Typography>
+
                   {/* Quantity Input */}
                   <TextField
+                    fullWidth
                     type="number"
                     label="Quantity"
-                    value={quantity}
+                    value={sellQuantity}
                     onChange={e => {
                       const maxQty = Number(selectedShareForSell.ownedQuantity);
-                      const val = Number(e.target.value);
-                      if (val > maxQty) setQuantity(maxQty);
-                      else if (val < 0) setQuantity(0);
-                      else setQuantity(val);
+                      let val = Number(e.target.value);
+                      if (val < 1) val = 1;
+                      if (val > maxQty) val = maxQty; // can’t sell more than you own
+                      setSellQuantity(val);
                     }}
-                    inputProps={{
-                      min: 0,
-                      max: Number(selectedShareForSell.ownedQuantity)
-                    }}
-                    fullWidth
-                    sx={{ mb: 1 }}
+                    sx={{ mb: 2 }}
                   />
+
+                  {/* Toggle between Market Price or Custom Price */}
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={useCustomPrice}
+                        onChange={(e) => setUseCustomPrice(e.target.checked)}
+                      />
+                    }
+                    label="Sell at Custom Price"
+                  />
+
+                  {/* Custom Price input (only if checked) */}
+                  {useCustomPrice && (
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Custom Price"
+                      value={customPrice}
+                      onChange={(e) => setCustomPrice(Number(e.target.value))}
+                      sx={{ mb: 2, mt: 1 }}
+                    />
+                  )}
+
+                  {/* Total calculation */}
                   <Typography mb={2}>
-                    Total: ₹{selectedShareForSell ? (quantity * selectedShareForSell.currentPrice).toFixed(2) : 0}
+                    Total: ₹
+                    {sellQuantity > 0
+                      ? (
+                        (useCustomPrice ? customPrice : selectedShareForSell.currentPrice) *
+                        sellQuantity
+                      ).toFixed(2)
+                      : 0}
                   </Typography>
 
                   {/* Sell Button */}
@@ -530,11 +584,13 @@ const Home = () => {
                     color="error"
                     fullWidth
                     onClick={async () => {
-                      if (quantity === 0) return alert("You don’t have shares to sell.");
-                      await handleSell(selectedShareForSell.id, quantity);
+                      const priceToUse = useCustomPrice
+                        ? customPrice
+                        : selectedShareForSell.currentPrice;
+                      await handleSell(selectedShareForSell.id, sellQuantity, priceToUse);
                       setOpenSellModal(false);
                     }}
-                    disabled={quantity < 1}
+                    disabled={sellQuantity < 1 || (useCustomPrice && customPrice <= 0)}
                   >
                     Sell
                   </Button>
@@ -548,54 +604,102 @@ const Home = () => {
 
       {/* Buy Modal */}
       <Modal open={openBuyModal} onClose={() => setOpenBuyModal(false)}>
-        <Box sx={{
-          position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
-          width: 300, bgcolor: "background.paper", boxShadow: 24, p: 4, borderRadius: 2
-        }}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 320,
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2
+          }}
+        >
           <IconButton
             onClick={() => setOpenBuyModal(false)}
             sx={{ position: "absolute", top: 8, right: 8, color: "red" }}
           >
             ✖
           </IconButton>
+
           <Typography variant="h6" mb={2}>Buy Shares</Typography>
+
           {selectedShare && (
             <>
               <Typography mb={1}>Share: {selectedShare.name}</Typography>
+              <Typography mb={1}>Current Market Price: ₹{selectedShare.marketPrice}</Typography>
+
+              {/* Quantity input */}
               <TextField
+                fullWidth
                 type="number"
                 label="Quantity"
-                value={quantity}
+                value={buyQuantity}
                 onChange={e => {
-                  const val = Number(e.target.value);
-                  if (val < 0) setQuantity(0);
-                  else if (val > selectedShare.available) setQuantity(selectedShare.available);
-                  else setQuantity(val);
+                  let val = Number(e.target.value);
+
+                  if (val < 1) val = 0;
+
+                  if (!useCustomPrice) {
+                    // ✅ Restrict only when buying at market price
+                    if (val > selectedShare.available) val = selectedShare.available;
+                  }
+
+                  setBuyQuantity(val);
                 }}
-                inputProps={{ min: 1, max: selectedShare.available }}
-                fullWidth
-                sx={{ mb: 1 }}
+                sx={{ mb: 2 }}
               />
 
+              {/* Toggle between Market Price or Custom Price */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={useCustomPrice}
+                    onChange={(e) => setUseCustomPrice(e.target.checked)}
+                  />
+                }
+                label="Buy at Custom Price"
+              />
+
+              {/* Custom Price input (only if checked) */}
+              {useCustomPrice && (
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Custom Price"
+                  value={customPrice}
+                  onChange={(e) => setCustomPrice(Number(e.target.value))}
+                  sx={{ mb: 2, mt: 1 }}
+                />
+              )}
+
+              {/* Total calculation */}
               <Typography mb={2}>
-                Total: ₹{selectedShare ? (quantity * selectedShare.marketPrice).toFixed(2) : 0}
+                Total: ₹
+                {buyQuantity > 0
+                  ? (
+                    (useCustomPrice ? customPrice : selectedShare.marketPrice) *
+                    buyQuantity
+                  ).toFixed(2)
+                  : 0}
               </Typography>
 
-
+              {/* Buy button */}
               <Button
                 variant="contained"
                 fullWidth
                 sx={{ backgroundColor: "#00ad1aff", "&:hover": { backgroundColor: "#006400" } }}
                 onClick={async () => {
-                  console.log("Buying:", selectedShare.id, quantity);
-                  await handleBuy(selectedShare.id, quantity);
+                  const priceToUse = useCustomPrice ? customPrice : selectedShare.marketPrice;
+                  await handleBuy(selectedShare.id, buyQuantity, priceToUse);
                   setOpenBuyModal(false);
                 }}
-                disabled={quantity < 1}
+                disabled={buyQuantity < 1 || (useCustomPrice && customPrice <= 0)}
               >
                 Buy
               </Button>
-
             </>
           )}
         </Box>

@@ -17,6 +17,7 @@ import RamImg from "../assets/RAM-IMG.png";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PeopleIcon from "@mui/icons-material/People";
+import DashboardIcon from '@mui/icons-material/Dashboard';
 
 const Header = () => {
   const [anchorElMenu, setAnchorElMenu] = useState(null);     // Hamburger menu
@@ -35,6 +36,11 @@ const Header = () => {
 
   const goToCustomers = () => {
     navigate("/your-customers");
+    handleCloseMenu();
+  };
+
+  const goToDashboard = () => {
+    navigate("/dashboard");
     handleCloseMenu();
   };
 
@@ -79,10 +85,18 @@ const Header = () => {
           open={Boolean(anchorElMenu)}
           onClose={handleCloseMenu}
         >
-          {localStorage.getItem("employeeId") && (   // ✅ Only show if employee is logged in
-            <MenuItem onClick={goToCustomers}>
-              <PeopleIcon sx={{ mr: 1 }} /> Your Customers
-            </MenuItem>
+          {localStorage.getItem("employeeId") && (
+            <>
+              <MenuItem onClick={goToCustomers}>
+                <PeopleIcon sx={{ mr: 1 }} />
+                Your Customers
+              </MenuItem>
+
+              <MenuItem onClick={goToDashboard}>
+                <DashboardIcon sx={{ mr: 1 }} />
+                Dashboard
+              </MenuItem>
+            </>
           )}
         </Menu>
 
@@ -117,7 +131,7 @@ const Header = () => {
           {/* ✅ Home button only on profile pages */}
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             {(location.pathname === "/profile" ||
-              location.pathname === "/bankEmp-profile" || location.pathname === "/your-customers" ) && (
+              location.pathname === "/bankEmp-profile" || location.pathname === "/your-customers" || location.pathname === "/dashboard") && (
                 <IconButton
                   color="inherit"
                   aria-label="go-back"
